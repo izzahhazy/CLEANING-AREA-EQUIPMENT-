@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HX3-F32 Cleaning Record</title>
+<style>
+:root{
+  --ink:#1d2a2b; --muted:#5d6b6c; --paper:#f4f6f4; --card:#ffffff; --line:#cdd6d2;
+  --green:#1d6b57; --green-soft:#dcefe8; --amber:#a8590b; --amber-soft:#fbe9d2; --red:#b3261e;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;background:var(--paper);color:var(--ink);font-size:16px;line-height:1.4;padding-bottom:84px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #2f7de1;outline-offset:2px}
+
+/* header */
+.top{background:var(--green);color:#fff;padding:12px 16px}
+.top h1{margin:0;font-size:1.15rem;font-weight:600}
+.top .sub{font-size:.85rem;opacity:.85}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:880px;margin:14px auto 0;padding:0 14px}
+.tabs button,.seg button{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:10px;padding:14px 8px;font-weight:700;cursor:pointer;line-height:1.25}
+.tabs button[aria-selected="true"],.seg button[aria-pressed="true"]{background:#1f2a26;border-color:#1f2a26;color:#fff}
+.sync{margin-left:auto;align-self:center;font-size:.8rem;padding:2px 10px;border-radius:99px;background:rgba(255,255,255,.18)}
+
+main{max-width:880px;margin:0 auto;padding:14px}
+main.wide{max-width:1500px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.field{display:flex;flex-direction:column;gap:4px;flex:1 1 160px}
+.field label{font-size:.82rem;color:var(--muted);font-weight:600}
+.field input,.field select,.field textarea{border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff;width:100%}
+.seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.hint{font-size:.85rem;color:var(--muted);margin:8px 0 0}
+
+.quick{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.quick button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:600}
+.count{margin-left:auto;font-size:.9rem;color:var(--muted)}
+
+.group{border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:10px;overflow:hidden}
+.group h3{margin:0;padding:9px 12px;font-size:.95rem;background:#eef2ef;border-bottom:1px solid var(--line)}
+.task{display:flex;align-items:center;gap:8px;padding:8px 12px}
+.task+.task{border-top:1px solid #e6ebe8}
+.task .name{flex:1;font-weight:600}
+.task .freq{font-size:.75rem;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+.task{flex-wrap:wrap}
+.tgs{display:flex;gap:8px}
+.tg.na[aria-pressed="true"]{background:#5d6b6c;border-color:#5d6b6c}
+.tg.na{min-width:58px}
+.tg{min-width:70px;min-height:46px;border-radius:9px;border:2px solid var(--line);background:#fff;cursor:pointer;font-weight:700;color:var(--muted)}
+.tg[aria-pressed="true"]{color:#fff}
+.tg.pre[aria-pressed="true"]{background:var(--green);border-color:var(--green)}
+.tg.post[aria-pressed="true"]{background:var(--amber);border-color:var(--amber)}
+
+.savebar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 14px;display:flex;gap:12px;align-items:center;justify-content:center}
+.savebar .msg{font-size:.9rem;color:var(--muted)}
+.btn{background:var(--green);color:#fff;border:0;border-radius:9px;padding:12px 28px;font-weight:700;cursor:pointer}
+.btn[disabled]{opacity:.6}
+.btn.alt{background:#fff;color:var(--green);border:2px solid var(--green)}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:9px;font-size:.92rem;z-index:20;max-width:90vw}
+.toast.err{background:var(--red)}
+.hidden{display:none!important}
+
+/* sheet (screen + print) */
+.sheetwrap{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.sheet{font-family:Arial,Helvetica,sans-serif;color:#000;min-width:1150px}
+.sheet table{border-collapse:collapse;width:100%}
+.sheet td,.sheet th{border:1px solid #000;padding:0 4px}
+.hd{table-layout:fixed;margin-bottom:6px}
+.hd td{font-size:11px;height:19px}
+.hd .t{text-align:center;font-weight:700;font-size:12px;color:#444}
+.hd .k{color:#666;width:11%}
+.hd .v{color:#666;width:12%}
+.hd .tl{width:77%}
+.meta{display:flex;justify-content:space-between;font-size:11px;margin:6px 0}
+.legend{font-size:10px;margin:0 0 4px;color:#333}
+.grid{table-layout:fixed}
+.grid th{background:#e0e0e0;font-size:10px;font-weight:700}
+.grid th.dn{font-size:7px;font-weight:400;padding:0;height:12px}
+.grid td.nm{font-size:10px;vertical-align:middle;line-height:1.15;padding:2px 5px}
+.grid td.tk{font-size:10px}
+.grid td.fq{font-size:10px;text-align:center}
+.grid col.cn{width:160px}
+.grid col.ct{width:52px}
+.grid col.cf{width:36px}
+.grid td.c{position:relative;height:24px;padding:0;background-repeat:no-repeat;background-size:100% 100%;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' preserveAspectRatio='none'><line x1='0' y1='10' x2='10' y2='0' stroke='black' stroke-width='1' vector-effect='non-scaling-stroke'/></svg>")}
+.grid td.c.x{background:repeating-linear-gradient(45deg,#e8e8e8,#e8e8e8 3px,#fff 3px,#fff 6px)}
+.grid td.c i{position:absolute;font-style:normal;font-weight:700;font-size:11px;line-height:1}
+.grid td.c.na{background-image:none;text-align:center;vertical-align:middle;font-size:7px;color:#444;font-weight:700}
+.grid td.c i.pre{left:2px;top:1px}
+.grid td.c i.post{right:2px;bottom:1px}
+.foot{font-size:11px;margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.foot span.l{display:inline-block;min-width:92px}
+.foot u{text-decoration:none;border-bottom:1px solid #000;display:inline-block;min-width:240px;padding:0 4px}
+
+.review h3{margin:0 0 6px;font-size:1rem}
+.review p{margin:6px 0}
+.review .warn{color:var(--amber);font-weight:600}
+.review .okc{color:var(--green);font-weight:600}
+.review .row .field{flex:1 1 220px}
+.grid td.fl{font-size:10px;font-weight:400;height:24px;padding:0 5px}
+.grid td.fc{height:24px;padding:0;text-align:center;font-size:9px;font-weight:700}
+.grid td.fc.cm{height:60px;vertical-align:top;font-weight:400;font-size:8px}
+.grid td.fc.cm span{display:block;writing-mode:vertical-rl;max-height:56px;overflow:hidden;margin:2px auto 0}
+.grid td.fx{background:repeating-linear-gradient(45deg,#e8e8e8,#e8e8e8 3px,#fff 3px,#fff 6px)}
+.cmt{font-size:10px;margin-top:5px}
+.chk{display:flex;align-items:center;gap:8px;font-weight:600;padding-bottom:10px}
+.erow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.erow .ename{flex:1 1 200px;border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff}
+.erow select{border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff}
+.ib{width:42px;height:42px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;font-weight:700;color:var(--muted)}
+.ib.del{color:var(--red)}
+@media (max-width:560px){
+  .tabs button{padding:12px 4px;font-size:.88rem}
+  .task .name{font-size:.95rem;flex:1 1 calc(100% - 44px)}
+  .tgs{flex:1 1 100%}
+  .tgs .tg{flex:1;min-width:0}
+}
+
+@media print{
+  @page{size:A4 landscape;margin:7mm}
+  body{background:#fff;padding:0}
+  .noprint{display:none!important}
+  main{max-width:none;padding:0}
+  .sheetwrap{overflow:visible;border:0;border-radius:0;padding:0;margin:0}
+  #sheets{display:block}
+  .sheet{min-width:0;break-after:page;page-break-after:always}
+  #sheets .part:last-child .sheet{break-after:auto;page-break-after:auto}
+  .hd td{font-size:8pt;height:4.2mm}
+  .hd .t{font-size:9pt}
+  .meta,.legend{font-size:8pt}
+  .grid th{font-size:7pt}
+  .grid th.dn{font-size:6pt;height:3.6mm}
+  .grid td.nm,.grid td.tk,.grid td.fq{font-size:7pt}
+  .grid col.cn{width:36mm}
+  .grid col.ct{width:11mm}
+  .grid col.cf{width:8mm}
+  .grid td.nm{padding:0 1.5mm}
+  .grid td.c{height:4.4mm}
+  .grid td.fl{font-size:7pt;height:4.4mm}
+  .grid td.fc{height:4.4mm;font-size:5.5pt}
+  .grid td.fc.cm{height:9mm;font-size:5pt}
+  .grid td.fc.cm span{max-height:8mm}
+  .cmt{font-size:6.5pt}
+  .grid td.c i{font-size:7pt}
+  .grid td.c.na{font-size:5.5pt}
+  .foot{font-size:8pt}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<header class="top noprint">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div>
+      <h1>Cleaning Record</h1>
+      <div class="sub">HEXA FOOD (HEXA 3) · HX3-F32 · Issue 2</div>
+    </div>
+    <span class="sync" id="sync">Local only</span>
+  </div>
+</header>
+
+<nav class="tabs noprint" role="tablist">
+  <button role="tab" data-tab="fill" aria-selected="true">Fill</button>
+  <button role="tab" data-tab="records" aria-selected="false">Records / Print</button>
+  <button role="tab" data-tab="sheet" aria-selected="false">Google Sheet</button>
+  <button role="tab" data-tab="edit" aria-selected="false">Edit</button>
+</nav>
+
+<main id="main"></main>
+
+<div class="savebar noprint" id="savebar">
+  <span class="msg" id="savemsg"></span>
+  <button class="btn" id="saveBtn">Save</button>
+</div>
+<div class="toast hidden" id="toast" role="status"></div>
+
+<script>
+/* ============ SETTINGS ============
+   The Google Apps Script Web App URL is set from the "Google Sheet" tab
+   (or put it in DEFAULT_URL to pre-fill for everyone). */
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbw62uKfNdMlkhg9kowRfm30Oxdu7mmV9myK5zV7U6xEqHYU4b6bbL-wZKeUVmMU2hYi/exec';
+const URL_KEY = 'hx3f32.url';
+const CONFIG = { SCRIPT_URL: (function(){ try{ return localStorage.getItem(URL_KEY) || DEFAULT_URL; }catch(e){ return DEFAULT_URL; } })() };
+
+/* ============ FORM STRUCTURE ============
+   The default below is used until a saved version exists in the Google Sheet.
+   After that, the structure is edited from the password-protected "Edit" tab. */
+const CFG_KEY = 'hx3f32.cfg';
+const AREAS = [
+  'Reception','Room 1 (Oat production)','Room 2 (Herbs storage)','Room 3 (Ziplock production)',
+  'Room 4 (Mixing room)','Warehouse (Finished goods storage)','Warehouse (Material & Raw material)',
+  'Equipment room','Washing room','Room 5 (4 in 1 & Glass jar)','Room 6','Room 7 (Oat storage)',
+  'Buffer storage','Goods Hoist'
+];
+const ITEMS = [
+  ['Table','D'],['Scoops','D'],['Filter funnel','D'],['Basin','D'],['Hand magnet','D'],
+  ['Pails/Bucket','D'],['Small blue container','D'],['Large blue container','D'],['Blue tray','D'],
+  ['General Waste bin','D'],['Organic Waste Bin','D'],['Recycle Waste Bin','D'],['Rack','D'],
+  ['Pallet','D'],['Stairs','D'],['Forklift','M'],['Washing Machine','M']
+];
+const areaGroups = () => AREAS.map((n,i)=>({ id:`a${i}`, name:n, type:'sweepmop',
+  tasks:[ {id:`a${i}s`, label:'Sweep', freq:'D'}, {id:`a${i}m`, label:'Mop', freq:'D'} ] }));
+const itemGroups = () => ITEMS.map(([n,f],i)=>({ id:`b${i}`, name:n, type:'single', tasks:[ {id:`b${i}`, label:null, freq:f} ] }));
+const DEFAULT_CONFIG = {
+  doc: { no:'HX3-F32', issue:'2', date:'01/03/2022' },
+  sections: [
+    { id:1, name:'General area', location:'General',   active:true, groups:areaGroups() },
+    { id:2, name:'Line 1',       location:'Line 1',    active:true, groups:itemGroups() },
+    { id:3, name:'Line 2',       location:'Line 2',    active:true, groups:itemGroups() },
+    { id:4, name:'Warehouse',    location:'Warehouse', active:true, groups:itemGroups() }
+  ]
+};
+let CFG = DEFAULT_CONFIG, DOC = CFG.doc, PARTS = {}, ALL = [];
+const clone = o => JSON.parse(JSON.stringify(o));
+function applyConfig(cfg){
+  CFG = cfg; DOC = cfg.doc; PARTS = {}; ALL = [];
+  cfg.sections.forEach(sec => {
+    PARTS[sec.id] = { label:sec.name, line:sec.location || '', groups:sec.groups };
+    if (sec.active !== false) ALL.push(sec.id);
+  });
+  if (typeof S !== 'undefined'){
+    if (!ALL.includes(S.part)) S.part = ALL[0];
+    if (S.rPart !== 'both' && !ALL.includes(+S.rPart)) S.rPart = 'both';
+  }
+}
+function loadCfg(){
+  try{ const c = JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); if (c && c.sections && c.sections.length) return c; }catch(e){}
+  return clone(DEFAULT_CONFIG);
+}
+const defLoc = p => (PARTS[p] && PARTS[p].line) || '';
+const taskIds = p => ((PARTS[p] && PARTS[p].groups) || []).flatMap(g=>g.tasks.map(t=>t.id));
+
+/* ============ STATE ============ */
+const LS = 'hx3f32.v1';
+let saved = {};
+try { saved = JSON.parse(localStorage.getItem(LS) || '{}'); } catch(e){}
+let db = saved.db || {};            // db["1_2026-10"] = {part, month, location, ..., days:{5:{a0s:3}}}
+let pending = saved.pending || {};  // pending["1_2026-10"] = {changes:{day:{id:{pre,post}}}, meta:bool}
+const pad = n => String(n).padStart(2,'0');
+const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+const S = { tab:'fill', part:1, date:todayStr(), rMonth:todayStr().slice(0,7), rPart:'both', sync: CONFIG.SCRIPT_URL ? 'connecting' : 'local', admin:{ pw:'', draft:null } };
+applyConfig(loadCfg());
+
+const persist = () => { try{ localStorage.setItem(LS, JSON.stringify({db,pending})); }catch(e){} };
+const daysIn = m => { const [y,mo]=m.split('-').map(Number); return new Date(y,mo,0).getDate(); };
+const keyOf = (p,m) => `${p}_${m}`;
+const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtDay = d => { const [y,mo,dd]=d.split('-'); return `${dd}/${mo}/${y}`; };
+const monthLabel = m => { const [y,mo]=m.split('-'); return `${mo}/${y}`; };
+
+function rec(p,m){
+  const k = keyOf(p,m);
+  return db[k] || (db[k] = { part:p, month:m, location:defLoc(p), carriedBy:'', inspectedBy:'', comments:'', days:{}, dm:{} });
+}
+function pend(p,m){
+  const k = keyOf(p,m);
+  return pending[k] || (pending[k] = { changes:{}, meta:false, dm:{} });
+}
+// per-day footer: dm[day] = { by: initials, ins: initials, com: comment }
+const dmOf = r => r.dm || (r.dm = {});
+function setDM(p, m, day, field, val){
+  const r = rec(p,m), dm = dmOf(r);
+  const d = dm[day] || (dm[day] = {});
+  if (val) d[field] = val; else delete d[field];
+  if (!Object.keys(d).length) delete dm[day];
+  const pd = pend(p,m); if (!pd.dm) pd.dm = {};
+  (pd.dm[day] || (pd.dm[day] = {}))[field] = val || '';
+  scheduleAutosave();
+}
+// bits per task: 1 = Pre, 2 = Post, 4 = N/A (N/A excludes Pre/Post)
+function mergeBits(v, c){
+  if (c.na === false) v &= ~4;
+  if ('pre' in c)  v = c.pre  ? (v|1) : (v&~1);
+  if ('post' in c) v = c.post ? (v|2) : (v&~2);
+  if (c.na === true) v = 4;
+  return v;
+}
+function applyChange(r, day, id, c){
+  const d = r.days[day] || (r.days[day] = {});
+  const nv = mergeBits(d[id] || 0, c);
+  if (nv) d[id] = nv; else delete d[id];
+  if (!Object.keys(d).length) delete r.days[day];
+}
+function setBit(p, m, day, id, field, on){
+  const c = {};
+  if (field === 'na'){ if (on){ c.pre = false; c.post = false; c.na = true; } else c.na = false; }
+  else { c[field] = on; if (on) c.na = false; }
+  applyChange(rec(p,m), day, id, c);
+  const ch = pend(p,m).changes;
+  const slot = ch[day] || (ch[day] = {});
+  slot[id] = Object.assign(slot[id] || {}, c);
+  scheduleAutosave();
+}
+const hasPending = () => Object.values(pending).some(v => Object.keys(v.changes).length || v.meta || Object.keys(v.dm||{}).length);
+
+/* ============ NETWORK ============ */
+async function netGet(p,m){
+  const r = await fetch(`${CONFIG.SCRIPT_URL}?action=get&part=${p}&month=${m}`);
+  return r.json();
+}
+async function netPost(body){
+  const r = await fetch(CONFIG.SCRIPT_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body) });
+  return r.json();
+}
+async function pull(p, m){
+  if (!CONFIG.SCRIPT_URL) return;
+  try{
+    const res = await netGet(p,m);
+    if (!res.ok) throw new Error(res.error);
+    const local = rec(p,m);
+    if (res.record){
+      const pd = pending[keyOf(p,m)];
+      local.days = res.record.days || {};
+      if (!(pd && pd.meta)) ['location','carriedBy','inspectedBy','comments'].forEach(f => local[f] = res.record[f] || (f==='location' ? defLoc(p) : ''));
+      if (pd) for (const day in pd.changes) for (const id in pd.changes[day]) applyChange(local, day, id, pd.changes[day][id]);
+      local.dm = res.record.dm || {};
+      if (pd && pd.dm) for (const day in pd.dm) for (const f in pd.dm[day]){
+        const d = local.dm[day] || (local.dm[day] = {}); if (pd.dm[day][f]) d[f] = pd.dm[day][f]; else delete d[f];
+        if (!Object.keys(d).length) delete local.dm[day];
+      }
+    }
+    persist(); setSync('ok');
+  }catch(e){ setSync('offline'); }
+}
+function setSync(s){
+  S.sync = s;
+  const el = document.getElementById('sync');
+  el.textContent = { local:'Local only', connecting:'Connecting…', ok:'Google Sheet connected', offline:'Offline' }[s];
+}
+
+// ---- saving: auto save ~2s after the last change, plus the Save button as a manual fallback ----
+let saving = false, autoTimer = null;
+function scheduleAutosave(delay){
+  S.saveState = 'idle';
+  if (!CONFIG.SCRIPT_URL){ updateSaveMsg(); return; }
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(() => save({ silent:true }), delay || 2000);
+  updateSaveMsg();
+}
+function mergePending(a, b){
+  if (!b) return a;
+  const out = clone(a); out.changes = out.changes || {}; out.dm = out.dm || {};
+  for (const day in b.changes){
+    out.changes[day] = out.changes[day] || {};
+    for (const id in b.changes[day]) out.changes[day][id] = Object.assign(out.changes[day][id] || {}, b.changes[day][id]);
+  }
+  for (const day in (b.dm || {})) out.dm[day] = Object.assign(out.dm[day] || {}, b.dm[day]);
+  out.meta = !!(a.meta || b.meta);
+  return out;
+}
+function reapplyPending(local, pd){
+  for (const day in pd.changes) for (const id in pd.changes[day]) applyChange(local, day, id, pd.changes[day][id]);
+  local.dm = local.dm || {};
+  for (const day in (pd.dm || {})) for (const f in pd.dm[day]){
+    const d = local.dm[day] || (local.dm[day] = {});
+    if (pd.dm[day][f]) d[f] = pd.dm[day][f]; else delete d[f];
+    if (!Object.keys(d).length) delete local.dm[day];
+  }
+}
+const isTyping = () => { const a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); };
+async function save(opts){
+  const silent = !!(opts && opts.silent);
+  const btn = document.getElementById('saveBtn');
+  if (!CONFIG.SCRIPT_URL){ persist(); if (!silent){ render(); toast('Saved on this device only. Google Sheet is not connected.'); } return; }
+  if (saving){ if (silent) scheduleAutosave(1500); return; }
+  const entries = Object.entries(pending).filter(([k,v]) => Object.keys(v.changes).length || v.meta || Object.keys(v.dm||{}).length);
+  if (!entries.length){ if (!silent) toast('No changes to save'); return; }
+  clearTimeout(autoTimer);
+  saving = true; S.saveState = 'saving';
+  if (!silent){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  updateSaveMsg();
+  const taken = {};
+  try{
+    for (const [k,v] of entries){
+      const r = db[k];
+      taken[k] = v; delete pending[k];                       // changes made while sending go into a fresh pending
+      const body = { action:'save', part:r.part, month:r.month, changes:v.changes };
+      if (v.dm && Object.keys(v.dm).length) body.dm = v.dm;
+      if (v.meta) body.meta = { location:r.location };
+      const res = await netPost(body);
+      if (!res.ok) throw new Error(res.error || 'Save failed');
+      db[k] = Object.assign({ part:r.part, month:r.month }, res.record); // server copy includes other operators' ticks
+      const np = pending[k];
+      if (np){ reapplyPending(db[k], np); if (np.meta) db[k].location = r.location; }
+      delete taken[k];
+    }
+    persist(); setSync('ok'); S.saveState = 'saved';
+    if (!silent) toast('Saved');
+  }catch(e){
+    for (const k in taken) pending[k] = mergePending(taken[k], pending[k]);   // nothing is lost
+    persist(); setSync('offline'); S.saveState = 'error';
+    if (!silent) toast('Not saved. Check the connection and press Save again.', true);
+    scheduleAutosave(15000);                                                  // retry later
+    S.saveState = 'error';
+  }finally{
+    saving = false;
+    if (!silent){ btn.disabled = false; btn.textContent = 'Save'; }
+    updateSaveMsg();
+    if (!silent || !isTyping()) render();
+  }
+}
+function updateSaveMsg(){
+  const el = document.getElementById('savemsg');
+  if (!el) return;
+  el.textContent = S.saveState === 'saving' ? 'Saving…'
+    : S.saveState === 'error' ? 'Not saved yet – will retry'
+    : hasPending() ? (CONFIG.SCRIPT_URL ? 'Saving shortly…' : 'Saved on this device only')
+    : S.saveState === 'saved' ? 'All changes saved ✓' : '';
+}
+
+/* ============ FILL VIEW ============ */
+function renderFill(){
+  const p = S.part, m = S.date.slice(0,7), day = +S.date.slice(8,10);
+  const r = rec(p,m), d = r.days[day] || {};
+  const ids = taskIds(p);
+  const na = ids.filter(i => (d[i]||0) & 4).length;
+  const pre = ids.filter(i => (d[i]||0) & 1).length;
+  const post = ids.filter(i => (d[i]||0) & 2).length;
+  const need = ids.length - na;
+
+  const groups = PARTS[p].groups.map(g => `
+    <section class="group">
+      <h3>${esc(g.name)}</h3>
+      ${g.tasks.map(t => { const v = d[t.id]||0; return `
+        <div class="task">
+          <span class="name">${esc(t.label || g.name)}</span>
+          <span class="freq">${t.freq}</span>
+          <div class="tgs">
+            <button class="tg pre"  data-tg="${t.id}" data-f="pre"  aria-pressed="${!!(v&1)}">Pre</button>
+            <button class="tg post" data-tg="${t.id}" data-f="post" aria-pressed="${!!(v&2)}">Post</button>
+            <button class="tg na"   data-tg="${t.id}" data-f="na"   aria-pressed="${!!(v&4)}">N/A</button>
+          </div>
+        </div>`; }).join('')}
+    </section>`).join('');
+
+  return `
+  <div class="panel">
+    <div class="row">
+      <div class="field"><label for="fDate">Date</label><input id="fDate" type="date" value="${S.date}"></div>
+      <div class="field" style="flex:1 1 100%"><label>Section</label>
+        <div class="seg">
+          ${ALL.map(id => `<button data-part="${id}" aria-pressed="${p===id}">${esc(PARTS[id].label)}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div class="field"><label for="fLoc">Location</label><input id="fLoc" data-meta="location" value="${esc(r.location || defLoc(p))}" placeholder="Location"></div>
+    </div>
+    <p class="hint"><b>Pre</b> = checked before production starts (pre start-up). <b>Post</b> = cleaned after production ends (post clean).</p>
+  </div>
+
+  <div class="quick">
+    <button data-all="pre">Tick all Pre</button>
+    <button data-all="post">Tick all Post</button>
+    <button data-all="clear">Clear this day</button>
+    <span class="count">Pre ${pre}/${need} · Post ${post}/${need}${na ? ` · N/A ${na}` : ''}</span>
+  </div>
+
+  ${groups}
+
+  <div class="panel">
+    <h3 style="margin:0 0 10px;font-size:1rem">Sign-off for ${fmtDay(S.date)} (${PARTS[p].label})</h3>
+    <div class="row">
+      <div class="field"><label for="fBy">Carried out by (initials)</label><input id="fBy" data-dm="by" maxlength="5" style="text-transform:uppercase" value="${esc((dmOf(r)[day]||{}).by||'')}"></div>
+    </div>
+    <div class="field" style="margin-top:12px"><label for="fCom">Comments for this day</label><textarea id="fCom" data-dm="com" rows="2">${esc((dmOf(r)[day]||{}).com||'')}</textarea></div>
+    <p class="hint">Inspected by is signed later by the inspector in Records / Print.</p>
+  </div>`;
+}
+
+/* ============ RECORDS / SHEET ============ */
+function sheetHTML(p, m){
+  const r = rec(p,m), n = daysIn(m), P = PARTS[p];
+  const dayHead = Array.from({length:31},(_,i)=>`<th class="dn">${i+1}</th>`).join('');
+  const rows = P.groups.map(g => g.tasks.map((t,ti) => {
+    let lead = '';
+    if (ti===0){
+      lead = g.tasks.length>1
+        ? `<td class="nm" rowspan="${g.tasks.length}">${esc(g.name)}</td>`
+        : `<td class="nm" colspan="2">${esc(g.name)}</td>`;
+    }
+    const tk = g.tasks.length>1 ? `<td class="tk">${esc(t.label)}</td>` : '';
+    let cells = '';
+    for (let d=1; d<=31; d++){
+      if (d>n){ cells += `<td class="c x"></td>`; continue; }
+      const v = (r.days[d]||{})[t.id]||0;
+      if (v & 4){ cells += `<td class="c na">N/A</td>`; continue; }
+      cells += `<td class="c">${v&1?'<i class="pre">√</i>':''}${v&2?'<i class="post">√</i>':''}</td>`;
+    }
+    return `<tr>${lead}${tk}<td class="fq">${t.freq}</td>${cells}</tr>`;
+  }).join('')).join('');
+
+  const dmv = dmOf(r);
+  const frow = (label, field) => {
+    let c = '';
+    for (let d=1; d<=31; d++){
+      if (d>n){ c += '<td class="fx"></td>'; continue; }
+      const val = (dmv[d]||{})[field] || '';
+      c += field==='com' ? `<td class="fc cm">${val?`<span>${esc(val)}</span>`:''}</td>` : `<td class="fc">${esc(val)}</td>`;
+    }
+    return `<tr class="ft"><td class="fl" colspan="3">${label}</td>${c}</tr>`;
+  };
+  const footRows = frow('Carried out by:','by') + frow('Inspected by:','ins') + frow('Comments:','com');
+  const cmts = Object.keys(dmv).map(Number).filter(d => d<=n && dmv[d].com).sort((a,b)=>a-b);
+  const cmtList = cmts.length ? `<div class="cmt"><b>Comment details:</b> ${cmts.map(d => `${d} – ${esc(dmv[d].com)}`).join(' &nbsp;|&nbsp; ')}</div>` : '';
+  return `
+  <div class="sheetwrap"><div class="sheet">
+    <table class="hd">
+      <tr><td class="t tl" rowspan="2">HEXA FOOD SDN BHD (HEXA 3)</td><td class="k">Doc No.:</td><td class="v">${DOC.no}</td></tr>
+      <tr><td class="k">Issue No:</td><td class="v">${DOC.issue}</td></tr>
+      <tr><td class="t tl" rowspan="2">CLEANING RECORD</td><td class="k">Issue Date:</td><td class="v">${DOC.date}</td></tr>
+      <tr><td class="k">Page:</td><td class="v">${Math.max(1, ALL.indexOf(p)+1)} of ${ALL.length}</td></tr>
+    </table>
+    <div class="meta"><span>Frequency: D = Daily, W = Weekly, M = Monthly, Y=Yearly, Others = please specify</span></div>
+    <div class="meta"><span>Location: <b>${esc(r.location || defLoc(p)) || '____________________'}</b></span><span>Month/Year: <b>${monthLabel(m)}</b></span></div>
+    <div class="legend">Each box is split by the diagonal: upper-left √ = Pre start-up, lower-right √ = Post clean.</div>
+    <table class="grid">
+      <colgroup><col class="cn"><col class="ct"><col class="cf">${'<col>'.repeat(31)}</colgroup>
+      <thead>
+        <tr><th colspan="2" rowspan="2">Item</th><th rowspan="2">Freq</th>
+            <th colspan="31">DAY OF THE MONTH. Please tick (√) when completed for pre start-up and post clean.</th></tr>
+        <tr>${dayHead}</tr>
+      </thead>
+      <tbody>${rows}${footRows}</tbody>
+    </table>
+    ${cmtList}
+  </div></div>`;
+}
+
+function gaps(p, m){
+  const n = daysIn(m), t = todayStr();
+  const last = m > t.slice(0,7) ? 0 : (m === t.slice(0,7) ? +t.slice(8,10) : n);
+  const r = rec(p,m);
+  const daily = PARTS[p].groups.flatMap(g=>g.tasks).filter(x=>x.freq==='D');
+  const bad = []; let miss = 0;
+  for (let d=1; d<=last; d++){
+    const day = r.days[d] || {}; let dm = 0;
+    daily.forEach(tk => { const v = day[tk.id]||0; if (v & 4) return; dm += (v&1?0:1) + (v&2?0:1); });
+    if (dm){ miss += dm; bad.push(d); }
+  }
+  return { miss, bad, last };
+}
+function signDays(p, m){
+  const r = rec(p,m), n = daysIn(m), dm = dmOf(r), out = [];
+  for (let d=1; d<=n; d++){
+    const day = r.days[d];
+    if ((day && Object.keys(day).length) || (dm[d] && dm[d].by)) out.push(d);
+  }
+  return out;
+}
+function reviewHTML(p, m){
+  const r = rec(p,m), g = gaps(p,m);
+  const status = g.last === 0 ? '<p>This month has not started yet.</p>'
+    : g.miss ? `<p class="warn">${g.miss} daily tick${g.miss>1?'s':''} missing on day${g.bad.length>1?'s':''} ${g.bad.join(', ')}.</p>
+                <p class="hint" style="margin-top:0">Days without production will also show here. Add a note in Comments for that day (Fill tab) if so.</p>`
+    : '<p class="okc">All daily Pre and Post ticks are complete up to today.</p>';
+  const act = signDays(p,m);
+  const unsigned = act.filter(d => !((dmOf(r)[d]||{}).ins));
+  const signedN = act.length - unsigned.length;
+  const sign = `<p>Days with records: <b>${act.length}</b> · signed: <b>${signedN}</b> · waiting: <b>${unsigned.length}</b></p>`
+    + (unsigned.length ? `<div class="row"><div class="field"><label for="sn${p}">Inspected by (initials)</label><input id="sn${p}" data-signname="${p}" maxlength="5" style="text-transform:uppercase" placeholder="e.g. AH"></div>
+       <button class="btn" data-sign="${p}">Sign ${unsigned.length} day${unsigned.length>1?'s':''}</button></div>` : '')
+    + (signedN ? `<div style="margin-top:10px"><button class="btn alt" data-unsign="${p}">Clear signatures</button></div>` : '');
+  return `<div class="panel noprint review"><h3>Review &amp; sign – ${esc(PARTS[p].label)} · ${monthLabel(m)}</h3>
+    <p class="hint" style="margin-top:0">Check the sheet below, then sign. Your initials are written in the Inspected by row for each day with records. Carried out by and Comments are entered per day in the Fill tab.</p>
+    ${status}${sign}</div>`;
+}
+
+function renderRecords(){
+  const parts = S.rPart==='both' ? ALL : [+S.rPart];
+  return `
+  <div class="panel noprint">
+    <div class="row">
+      <div class="field"><label for="rMonth">Month</label><input id="rMonth" type="month" value="${S.rMonth}"></div>
+      <div class="field"><label for="rPart">Section</label>
+        <select id="rPart">
+          <option value="both" ${S.rPart==='both'?'selected':''}>All sections (each prints on its own page)</option>
+          ${ALL.map(id => `<option value="${id}" ${S.rPart===String(id)?'selected':''}>${esc(PARTS[id].label)}</option>`).join('')}
+        </select>
+      </div>
+      <button class="btn alt" id="refreshBtn">Refresh</button>
+      <button class="btn" id="printBtn">Print</button>
+    </div>
+    <p class="hint">Printing uses A4 landscape and fits all 31 days on one page. Each section starts on a new page with its own header. On a phone, swipe the sheet sideways to see every day.</p>
+  </div>
+  <div id="sheets">${parts.map(p => `<div class="part">${reviewHTML(p, S.rMonth)}${sheetHTML(p, S.rMonth)}</div>`).join('')}</div>`;
+}
+
+function signOff(p){
+  const input = document.querySelector(`[data-signname="${p}"]`);
+  const name = (input && input.value || '').trim().toUpperCase();
+  if (!name){ toast('Enter the inspector initials first', true); return; }
+  const g = gaps(p, S.rMonth);
+  if (g.miss && !confirm(`${g.miss} daily tick(s) are still missing. Sign anyway?`)) return;
+  const r = rec(p, S.rMonth);
+  signDays(p, S.rMonth).filter(d => !((dmOf(r)[d]||{}).ins)).forEach(d => setDM(p, S.rMonth, d, 'ins', name));
+  persist(); save();
+}
+
+/* ============ GOOGLE SHEET TAB ============ */
+function renderSheetTab(){
+  const on = !!CONFIG.SCRIPT_URL;
+  return `
+  <div class="panel">
+    <h3 style="margin:0 0 6px;font-size:1.05rem">Google Sheet connection</h3>
+    <p class="hint" style="margin:0 0 12px">Status: <b>${on ? 'Connected' : 'Not connected (data stays on this device)'}</b></p>
+    <div class="field"><label for="urlIn">Apps Script Web App URL</label>
+      <input id="urlIn" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(CONFIG.SCRIPT_URL)}"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="connectBtn">Save &amp; test</button>
+      <button class="btn alt" id="disconnectBtn" ${on?'':'disabled'}>Disconnect</button>
+    </div>
+    <p class="hint">Records are saved in a tab named "Cleaning Record" in the linked Google Sheet. The URL is remembered on this device only.</p>
+  </div>`;
+}
+async function connect(){
+  const url = (document.getElementById('urlIn').value || '').trim();
+  if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(url)){ toast('Paste the Web App URL ending in /exec', true); return; }
+  const btn = document.getElementById('connectBtn'); btn.disabled = true; btn.textContent = 'Testing…';
+  try{
+    const r = await fetch(`${url}?action=get&part=1&month=${todayStr().slice(0,7)}`);
+    const j = await r.json();
+    if (!j.ok) throw new Error();
+    CONFIG.SCRIPT_URL = url;
+    try{ localStorage.setItem(URL_KEY, url); }catch(e){}
+    setSync('ok'); toast('Connected to Google Sheet');
+  }catch(e){
+    toast('Could not connect. Check the URL and that access is set to Anyone.', true);
+  }finally{ render(); }
+}
+function disconnect(){
+  CONFIG.SCRIPT_URL = '';
+  try{ localStorage.removeItem(URL_KEY); }catch(e){}
+  setSync('local'); toast('Disconnected'); render();
+}
+
+/* ============ EDIT TAB (password protected) ============ */
+const newId = () => 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+const noteP = t => `<div class="panel"><p style="margin:0">${t}</p></div>`;
+function renderEditTab(){
+  if (!CONFIG.SCRIPT_URL) return noteP('Connect the Google Sheet first (Google Sheet tab). The password is checked by the Google Apps Script, so the Edit tab needs the connection.');
+  if (!S.admin.pw) return `
+  <div class="panel">
+    <h3 style="margin:0 0 10px;font-size:1.05rem">Edit form (admin)</h3>
+    <div class="field"><label for="adminPw">Password</label><input id="adminPw" type="password" autocomplete="current-password"></div>
+    <div class="row" style="margin-top:12px"><button class="btn" id="unlockBtn">Unlock</button></div>
+    <p class="hint">Change the item list, tab names, locations and document header. Changes apply to every device when it reloads the page.</p>
+  </div>`;
+  const d = S.admin.draft;
+  const secs = d.sections.map((sec, si) => `
+  <section class="panel">
+    <div class="row">
+      <div class="field" style="flex:2 1 200px"><label>Tab name</label><input type="text" data-cfg="sections.${si}.name" value="${esc(sec.name)}"></div>
+      <div class="field"><label>Default location</label><input type="text" data-cfg="sections.${si}.location" value="${esc(sec.location||'')}"></div>
+      <label class="chk"><input type="checkbox" data-cfg="sections.${si}.active" ${sec.active!==false?'checked':''}> Show tab</label>
+    </div>
+    <div class="row" style="margin:12px 0 6px;gap:8px">
+      <button class="btn alt sm" data-sact="up" data-si="${si}">▲ Move tab</button>
+      <button class="btn alt sm" data-sact="down" data-si="${si}">▼ Move tab</button>
+      <button class="btn alt sm" data-sact="dup" data-si="${si}">Duplicate tab</button>
+    </div>
+    <p class="hint" style="margin:0 0 10px">${sec.groups.length} item${sec.groups.length===1?'':'s'}. "Sweep &amp; Mop" gives two rows; "Single" gives one row.</p>
+    ${sec.groups.map((g, gi) => `
+    <div class="erow">
+      <input type="text" class="ename" data-cfg="sections.${si}.groups.${gi}.name" value="${esc(g.name)}" aria-label="Item name">
+      <select data-cfg="sections.${si}.groups.${gi}.type" aria-label="Type">
+        <option value="single" ${g.type==='single'?'selected':''}>Single</option>
+        <option value="sweepmop" ${g.type==='sweepmop'?'selected':''}>Sweep &amp; Mop</option></select>
+      <select data-cfg="sections.${si}.groups.${gi}.freq" aria-label="Frequency" ${g.type==='sweepmop'?'disabled':''}>
+        ${['D','W','M','Y'].map(f => `<option value="${f}" ${(g.tasks[0]&&g.tasks[0].freq)===f?'selected':''}>${f}</option>`).join('')}</select>
+      <button class="ib" data-cact="up" data-si="${si}" data-gi="${gi}" aria-label="Move up">▲</button>
+      <button class="ib" data-cact="down" data-si="${si}" data-gi="${gi}" aria-label="Move down">▼</button>
+      <button class="ib del" data-cact="del" data-si="${si}" data-gi="${gi}" aria-label="Remove">✕</button>
+    </div>`).join('')}
+    <button class="btn alt sm" data-cact="add" data-si="${si}">+ Add item</button>
+  </section>`).join('');
+  return `
+  <div class="panel">
+    <h3 style="margin:0 0 10px;font-size:1.05rem">Document header</h3>
+    <div class="row">
+      <div class="field"><label>Doc No.</label><input type="text" data-cfg="doc.no" value="${esc(d.doc.no)}"></div>
+      <div class="field"><label>Issue No</label><input type="text" data-cfg="doc.issue" value="${esc(d.doc.issue)}"></div>
+      <div class="field"><label>Issue Date</label><input type="text" data-cfg="doc.date" value="${esc(d.doc.date)}"></div>
+    </div>
+  </div>
+  ${secs}
+  <div class="panel">
+    <div class="row">
+      <button class="btn" id="saveCfgBtn">Save changes</button>
+      <button class="btn alt" id="addSecBtn">+ Add tab</button>
+      <button class="btn alt" id="discardCfgBtn">Discard</button>
+      <button class="btn alt" id="lockBtn">Lock</button>
+    </div>
+    <p class="hint">Removing an item or hiding a tab only hides it from the form. Records already saved stay in the Google Sheet.</p>
+  </div>`;
+}
+function setType(g, type){
+  if (type === g.type) return;
+  const first = g.tasks[0] || { id:newId(), freq:'D' };
+  if (type === 'single'){
+    g.tasks = [ { id:first.id, label:null, freq:first.freq || 'D' } ];
+  } else {
+    g.tasks = [ { id:first.id, label:'Sweep', freq:'D' }, { id:newId(), label:'Mop', freq:'D' } ];
+  }
+  g.type = type;
+}
+function cfgField(e){
+  const path = e.target.dataset.cfg; if (!path || !S.admin.draft) return false;
+  const parts = path.split('.'), last = parts.pop();
+  let o = S.admin.draft; parts.forEach(k => { o = o[k]; });
+  if (last === 'type'){ setType(o, e.target.value); render(); }
+  else if (last === 'freq'){ o.tasks.forEach(t => { t.freq = e.target.value; }); }
+  else if (last === 'active'){ o.active = e.target.checked; }
+  else o[last] = e.target.value;
+  return true;
+}
+const moveIn = (arr, i, dir) => { const j = i + (dir === 'up' ? -1 : 1); if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; };
+function editClick(t){
+  const d = S.admin.draft;
+  if (t.id === 'unlockBtn'){ unlock(); return true; }
+  if (t.id === 'lockBtn'){ S.admin = { pw:'', draft:null }; render(); return true; }
+  if (t.id === 'discardCfgBtn'){ S.admin.draft = clone(CFG); render(); toast('Changes discarded'); return true; }
+  if (t.id === 'saveCfgBtn'){ saveConfig(); return true; }
+  if (t.id === 'addSecBtn'){
+    const id = Math.max(0, ...d.sections.map(x => x.id)) + 1;
+    d.sections.push({ id, name:'New tab', location:'', active:true, groups:[] }); render(); return true;
+  }
+  const si = +t.dataset.si, gi = +t.dataset.gi;
+  if (t.dataset.sact){
+    if (t.dataset.sact === 'dup'){
+      const c = clone(d.sections[si]);
+      c.id = Math.max(0, ...d.sections.map(x => x.id)) + 1; c.name += ' (copy)';
+      d.sections.splice(si + 1, 0, c);
+    } else moveIn(d.sections, si, t.dataset.sact);
+    render(); return true;
+  }
+  if (t.dataset.cact){
+    const groups = d.sections[si].groups, a = t.dataset.cact;
+    if (a === 'add'){ const id = newId(); groups.push({ id, name:'New item', type:'single', tasks:[ { id, label:null, freq:'D' } ] }); }
+    else if (a === 'del'){ if (!confirm(`Remove "${groups[gi].name}" from this tab?`)) return true; groups.splice(gi, 1); }
+    else moveIn(groups, gi, a);
+    render(); return true;
+  }
+  return false;
+}
+async function unlock(){
+  const pw = document.getElementById('adminPw').value;
+  if (!pw){ toast('Enter the password', true); return; }
+  const btn = document.getElementById('unlockBtn'); btn.disabled = true;
+  try{
+    const res = await netPost({ action:'auth', password:pw });
+    if (!res.ok) throw new Error(res.error || 'Wrong password');
+    S.admin = { pw, draft:clone(CFG) };
+  }catch(e){ toast(String(e.message || e).includes('not set') ? 'Admin password is not set in Apps Script yet' : 'Wrong password or no connection', true); }
+  finally{ render(); }
+}
+async function saveConfig(){
+  const d = S.admin.draft;
+  if (!d.doc.no.trim()){ toast('Doc No. cannot be empty', true); return; }
+  if (!d.sections.some(x => x.active !== false)){ toast('Keep at least one tab shown', true); return; }
+  for (const sec of d.sections){
+    if (!sec.name.trim()){ toast('Every tab needs a name', true); return; }
+    if (sec.groups.some(g => !g.name.trim())){ toast(`An item in "${sec.name}" has no name`, true); return; }
+  }
+  const btn = document.getElementById('saveCfgBtn'); btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const res = await netPost({ action:'saveConfig', password:S.admin.pw, config:d });
+    if (!res.ok) throw new Error(res.error || 'failed');
+    applyConfig(clone(d));
+    try{ localStorage.setItem(CFG_KEY, JSON.stringify(CFG)); }catch(e){}
+    S.admin.draft = clone(CFG);
+    toast('Saved. Other devices update when they reload the page.');
+  }catch(e){ toast('Not saved. Check the password and connection.', true); }
+  finally{ render(); }
+}
+async function syncConfig(){
+  if (!CONFIG.SCRIPT_URL) return;
+  try{
+    const r = await fetch(`${CONFIG.SCRIPT_URL}?action=config`); const j = await r.json();
+    if (j.ok && j.config && j.config.sections && JSON.stringify(j.config) !== JSON.stringify(CFG)){
+      applyConfig(j.config);
+      try{ localStorage.setItem(CFG_KEY, JSON.stringify(j.config)); }catch(e){}
+    }
+  }catch(e){}
+}
+
+/* ============ RENDER + EVENTS ============ */
+function render(){
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab===S.tab));
+  document.getElementById('savebar').classList.toggle('hidden', S.tab!=='fill');
+  document.getElementById('main').className = S.tab==='records' ? 'wide' : '';
+  document.getElementById('main').innerHTML = S.tab==='fill' ? renderFill() : S.tab==='records' ? renderRecords() : S.tab==='edit' ? renderEditTab() : renderSheetTab();
+  updateSaveMsg();
+}
+async function loadAndRender(){
+  render();
+  if (!CONFIG.SCRIPT_URL || S.tab==='sheet' || S.tab==='edit') return;
+  const tab = S.tab;
+  if (tab==='fill') await pull(S.part, S.date.slice(0,7));
+  else if (tab==='records') for (const p of (S.rPart==='both'?ALL:[+S.rPart])) await pull(p, S.rMonth);
+  if (S.tab===tab) render();
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (S.tab === 'edit' && S.admin.draft ? editClick(t) : (t.id === 'unlockBtn' && editClick(t))) return;
+  if (t.dataset.tab){ S.tab = t.dataset.tab; loadAndRender(); return; }
+  if (t.dataset.part){ S.part = +t.dataset.part; loadAndRender(); return; }
+  if (t.dataset.sign){ signOff(+t.dataset.sign); return; }
+  if (t.dataset.unsign){
+    const up = +t.dataset.unsign, r = rec(up, S.rMonth);
+    if (!confirm('Clear all inspector signatures for this month?')) return;
+    Object.keys(dmOf(r)).filter(d => dmOf(r)[d].ins).forEach(d => setDM(up, S.rMonth, +d, 'ins', ''));
+    persist(); save(); return;
+  }
+  const m = S.date.slice(0,7), day = +S.date.slice(8,10);
+  if (t.dataset.tg){
+    const cur = (rec(S.part,m).days[day]||{})[t.dataset.tg]||0;
+    const bit = {pre:1, post:2, na:4}[t.dataset.f];
+    setBit(S.part, m, day, t.dataset.tg, t.dataset.f, !(cur & bit));
+    persist(); render(); return;
+  }
+  if (t.dataset.all){
+    const a = t.dataset.all;
+    taskIds(S.part).forEach(id => {
+      if (a==='clear'){ setBit(S.part,m,day,id,'pre',false); setBit(S.part,m,day,id,'post',false); }
+      else if (!(((rec(S.part,m).days[day]||{})[id]||0) & 4)) setBit(S.part,m,day,id,a,true); // skip N/A items
+    });
+    persist(); render(); return;
+  }
+  if (t.id==='saveBtn') save();
+  if (t.id==='printBtn') window.print();
+  if (t.id==='connectBtn') connect();
+  if (t.id==='disconnectBtn') disconnect();
+  if (t.id==='refreshBtn') loadAndRender();
+});
+document.addEventListener('input', e => {
+  if (e.target.dataset && e.target.dataset.cfg && e.target.type === 'text'){ cfgField(e); return; }
+  const dmf = e.target.dataset && e.target.dataset.dm;
+  if (dmf){
+    const val = dmf === 'by' ? e.target.value.toUpperCase().trim() : e.target.value.trim();
+    setDM(S.part, S.date.slice(0,7), +S.date.slice(8,10), dmf, val);
+    persist(); return;
+  }
+  const f = e.target.dataset && e.target.dataset.meta;
+  if (!f) return;
+  const m = S.date.slice(0,7);
+  rec(S.part,m)[f] = e.target.value;
+  pend(S.part,m).meta = true;
+  persist(); scheduleAutosave();
+});
+document.addEventListener('change', e => {
+  if (e.target.dataset && e.target.dataset.cfg && (e.target.tagName === 'SELECT' || e.target.type === 'checkbox')){ cfgField(e); return; }
+  if (e.target.id==='fDate'){ if (e.target.value){ S.date = e.target.value; loadAndRender(); } }
+  if (e.target.id==='rMonth'){ if (e.target.value){ S.rMonth = e.target.value; loadAndRender(); } }
+  if (e.target.id==='rPart'){ S.rPart = e.target.value; loadAndRender(); }
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden && hasPending()) save({ silent:true }); });
+window.addEventListener('online', () => { if (hasPending()) save({ silent:true }); });
+window.addEventListener('beforeunload', e => { if (hasPending() && CONFIG.SCRIPT_URL){ e.preventDefault(); e.returnValue=''; } });
+
+setSync(S.sync);
+render();
+syncConfig().then(loadAndRender);
+</script>
+</body>
+</html>
