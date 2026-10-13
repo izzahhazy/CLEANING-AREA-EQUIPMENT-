@@ -182,7 +182,7 @@ main.wide{max-width:1500px}
 /* ============ SETTINGS ============
    The Google Apps Script Web App URL is set from the "Google Sheet" tab
    (or put it in DEFAULT_URL to pre-fill for everyone). */
-const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbw62uKfNdMlkhg9kowRfm30Oxdu7mmV9myK5zV7U6xEqHYU4b6bbL-wZKeUVmMU2hYi/exec';
+const DEFAULT_URL = '';
 const URL_KEY = 'hx3f32.url';
 const CONFIG = { SCRIPT_URL: (function(){ try{ return localStorage.getItem(URL_KEY) || DEFAULT_URL; }catch(e){ return DEFAULT_URL; } })() };
 
@@ -517,7 +517,6 @@ function sheetHTML(p, m){
     </table>
     <div class="meta"><span>Frequency: D = Daily, W = Weekly, M = Monthly, Y=Yearly, Others = please specify</span></div>
     <div class="meta"><span>Location: <b>${esc(r.location || defLoc(p)) || '____________________'}</b></span><span>Month/Year: <b>${monthLabel(m)}</b></span></div>
-    <div class="legend">Each box is split by the diagonal: upper-left √ = Pre start-up, lower-right √ = Post clean.</div>
     <table class="grid">
       <colgroup><col class="cn"><col class="ct"><col class="cf">${'<col>'.repeat(31)}</colgroup>
       <thead>
