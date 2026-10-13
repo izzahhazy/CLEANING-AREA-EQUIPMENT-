@@ -112,6 +112,12 @@ main.wide{max-width:1500px}
 .erow select{border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff}
 .ib{width:42px;height:42px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;font-weight:700;color:var(--muted)}
 .ib.del{color:var(--red)}
+.dchips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.dchip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff;cursor:pointer}
+.dchip input{width:18px;height:18px}
+.dchip small{color:var(--muted);font-size:.75rem}
+.dchip.signed{background:#dcefe8;border-color:var(--green)}
+.dchip.inc{border-color:var(--amber)}
 @media (max-width:560px){
   .tabs button{padding:12px 4px;font-size:.88rem}
   .task .name{font-size:.95rem;flex:1 1 calc(100% - 44px)}
@@ -182,7 +188,7 @@ main.wide{max-width:1500px}
 /* ============ SETTINGS ============
    The Google Apps Script Web App URL is set from the "Google Sheet" tab
    (or put it in DEFAULT_URL to pre-fill for everyone). */
-const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbw62uKfNdMlkhg9kowRfm30Oxdu7mmV9myK5zV7U6xEqHYU4b6bbL-wZKeUVmMU2hYi/exec';
+const DEFAULT_URL = '';
 const URL_KEY = 'hx3f32.url';
 const CONFIG = { SCRIPT_URL: (function(){ try{ return localStorage.getItem(URL_KEY) || DEFAULT_URL; }catch(e){ return DEFAULT_URL; } })() };
 
@@ -332,8 +338,8 @@ async function pull(p, m){
         if (!Object.keys(d).length) delete local.dm[day];
       }
     }
-    persist(); setSync('ok');
-  }catch(e){ setSync('offline'); }
+    persist(); setSync('ok'); return true;
+  }catch(e){ setSync('offline'); return false; }
 }
 function setSync(s){
   S.sync = s;
@@ -411,6 +417,13 @@ async function save(opts){
     updateSaveMsg();
     if (!silent || !isTyping()) render();
   }
+}
+/* ============ UI HELPERS ============ */
+let toastTimer;
+function toast(msg, err){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast' + (err ? ' err' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 3200);
 }
 function updateSaveMsg(){
   const el = document.getElementById('savemsg');
@@ -542,15 +555,17 @@ function sheetHTML(p, m){
 function gaps(p, m){
   const n = daysIn(m), t = todayStr();
   const last = m > t.slice(0,7) ? 0 : (m === t.slice(0,7) ? +t.slice(8,10) : n);
-  const r = rec(p,m);
+  const r = rec(p,m), dmv = dmOf(r);
   const daily = PARTS[p].groups.flatMap(g=>g.tasks).filter(x=>x.freq==='D');
-  const bad = []; let miss = 0;
+  const incomplete = [], none = []; let miss = 0;
   for (let d=1; d<=last; d++){
-    const day = r.days[d] || {}; let dm = 0;
-    daily.forEach(tk => { const v = day[tk.id]||0; if (v & 4) return; dm += (v&1?0:1) + (v&2?0:1); });
-    if (dm){ miss += dm; bad.push(d); }
+    const day = r.days[d] || {};
+    if (!Object.keys(day).length && !(dmv[d] && dmv[d].by)){ none.push(d); continue; }   // no record: not counted as missing
+    let c = 0;
+    daily.forEach(tk => { const v = day[tk.id]||0; if (v & 4) return; c += (v&1?0:1) + (v&2?0:1); });
+    if (c){ miss += c; incomplete.push({ d, c }); }
   }
-  return { miss, bad, last };
+  return { miss, incomplete, none, last };
 }
 function signDays(p, m){
   const r = rec(p,m), n = daysIn(m), dm = dmOf(r), out = [];
@@ -561,20 +576,37 @@ function signDays(p, m){
   return out;
 }
 function reviewHTML(p, m){
-  const r = rec(p,m), g = gaps(p,m);
-  const status = g.last === 0 ? '<p>This month has not started yet.</p>'
-    : g.miss ? `<p class="warn">${g.miss} daily tick${g.miss>1?'s':''} missing on day${g.bad.length>1?'s':''} ${g.bad.join(', ')}.</p>
-                <p class="hint" style="margin-top:0">Days without production will also show here. Add a note in Comments for that day (Fill tab) if so.</p>`
-    : '<p class="okc">All daily Pre and Post ticks are complete up to today.</p>';
+  const r = rec(p,m), g = gaps(p,m), dmv = dmOf(r);
+  const incSet = new Set(g.incomplete.map(x => x.d));
+  let status = '';
+  if (g.last === 0) status = '<p>This month has not started yet.</p>';
+  else {
+    if (g.incomplete.length) status += `<p class="warn">Incomplete: ${g.incomplete.map(x => `day ${x.d} (${x.c} missing)`).join(', ')}.</p>`;
+    else if (signDays(p,m).length) status += '<p class="okc">All days with records are complete.</p>';
+    if (g.none.length) status += `<p class="hint" style="margin-top:0">No records on day${g.none.length>1?'s':''} ${g.none.join(', ')} (not counted as missing). Add a note in Comments for that day (Fill tab) if production did not run.</p>`;
+  }
   const act = signDays(p,m);
-  const unsigned = act.filter(d => !((dmOf(r)[d]||{}).ins));
-  const signedN = act.length - unsigned.length;
-  const sign = `<p>Days with records: <b>${act.length}</b> · signed: <b>${signedN}</b> · waiting: <b>${unsigned.length}</b></p>`
-    + (unsigned.length ? `<div class="row"><div class="field"><label for="sn${p}">Inspected by (initials)</label><input id="sn${p}" data-signname="${p}" maxlength="5" style="text-transform:uppercase" placeholder="e.g. AH"></div>
-       <button class="btn" data-sign="${p}">Sign ${unsigned.length} day${unsigned.length>1?'s':''}</button></div>` : '')
-    + (signedN ? `<div style="margin-top:10px"><button class="btn alt" data-unsign="${p}">Clear signatures</button></div>` : '');
+  const signedN = act.filter(d => (dmv[d]||{}).ins).length;
+  const chips = act.map(d => {
+    const ins = (dmv[d]||{}).ins;
+    return `<label class="dchip ${ins?'signed':''} ${incSet.has(d)?'inc':''}"><input type="checkbox" data-signday="${p}" value="${d}">
+      <b>${d}</b><small>${ins ? '✓ ' + esc(ins) : (incSet.has(d) ? '⚠ incomplete' : 'not signed')}</small></label>`;
+  }).join('');
+  const sign = act.length ? `
+    <p>Days with records: <b>${act.length}</b> · signed: <b>${signedN}</b> · waiting: <b>${act.length - signedN}</b></p>
+    <p class="hint" style="margin:0">Tick the days you have checked, enter your initials, then sign.</p>
+    <div class="dchips">${chips}</div>
+    <div class="row">
+      <div class="field"><label for="sn${p}">Inspected by (initials)</label><input id="sn${p}" data-signname="${p}" maxlength="5" style="text-transform:uppercase" placeholder="e.g. AH"></div>
+      <button class="btn" data-sign="${p}">Sign selected days</button>
+    </div>
+    <div class="row" style="margin-top:10px;gap:8px">
+      <button class="btn alt sm" data-selall="${p}">Select all unsigned</button>
+      <button class="btn alt sm" data-selnone="${p}">Clear selection</button>
+      <button class="btn alt sm" data-unsign="${p}">Remove signature from selected</button>
+    </div>` : '<p>No days with records yet.</p>';
   return `<div class="panel noprint review"><h3>Review &amp; sign – ${esc(PARTS[p].label)} · ${monthLabel(m)}</h3>
-    <p class="hint" style="margin-top:0">Check the sheet below, then sign. Your initials are written in the Inspected by row for each day with records. Carried out by and Comments are entered per day in the Fill tab.</p>
+    <p class="hint" style="margin-top:0">Check the sheet below, then sign. Your initials are written in the Inspected by row for each day you sign. Carried out by and Comments are entered per day in the Fill tab.</p>
     ${status}${sign}</div>`;
 }
 
@@ -598,15 +630,46 @@ function renderRecords(){
   <div id="sheets">${parts.map(p => `<div class="part">${reviewHTML(p, S.rMonth)}${sheetHTML(p, S.rMonth)}</div>`).join('')}</div>`;
 }
 
+const pickedDays = p => [...document.querySelectorAll(`input[data-signday="${p}"]:checked`)].map(i => +i.value);
 function signOff(p){
   const input = document.querySelector(`[data-signname="${p}"]`);
   const name = (input && input.value || '').trim().toUpperCase();
-  if (!name){ toast('Enter the inspector initials first', true); return; }
-  const g = gaps(p, S.rMonth);
-  if (g.miss && !confirm(`${g.miss} daily tick(s) are still missing. Sign anyway?`)) return;
   const r = rec(p, S.rMonth);
-  signDays(p, S.rMonth).filter(d => !((dmOf(r)[d]||{}).ins)).forEach(d => setDM(p, S.rMonth, d, 'ins', name));
+  const days = pickedDays(p).filter(d => !((dmOf(r)[d]||{}).ins));
+  if (!pickedDays(p).length){ toast('Tick the days to sign first', true); return; }
+  if (!days.length){ toast('The selected days are already signed', true); return; }
+  if (!name){ toast('Enter the inspector initials first', true); return; }
+  const inc = gaps(p, S.rMonth).incomplete.filter(x => days.includes(x.d));
+  if (inc.length && !confirm(`Day ${inc.map(x => x.d).join(', ')} still ha${inc.length>1?'ve':'s'} missing ticks. Sign anyway?`)) return;
+  days.forEach(d => setDM(p, S.rMonth, d, 'ins', name));
   persist(); save();
+}
+function unsignPicked(p){
+  const r = rec(p, S.rMonth);
+  const days = pickedDays(p).filter(d => (dmOf(r)[d]||{}).ins);
+  if (!days.length){ toast('Tick the signed days to remove first', true); return; }
+  if (!confirm(`Remove the inspector signature from day ${days.join(', ')}?`)) return;
+  days.forEach(d => setDM(p, S.rMonth, d, 'ins', ''));
+  persist(); save();
+}
+function tickBoxes(p, mode){
+  const r = rec(p, S.rMonth);
+  document.querySelectorAll(`input[data-signday="${p}"]`).forEach(i => {
+    i.checked = mode === 'unsigned' ? !((dmOf(r)[+i.value]||{}).ins) : false;
+  });
+}
+
+async function refreshNow(){
+  const btn = document.getElementById('refreshBtn');
+  if (!CONFIG.SCRIPT_URL){ toast('Not connected to Google Sheet. Showing data on this device only.', true); return; }
+  if (btn){ btn.disabled = true; btn.textContent = 'Refreshing…'; }
+  let ok = true;
+  try{
+    await save({ silent:true });                                   // send my own changes first
+    for (const p of (S.rPart==='both' ? ALL : [+S.rPart])) if (!(await pull(p, S.rMonth))) ok = false;
+  }catch(e){ ok = false; }
+  toast(ok ? 'Updated from Google Sheet' : 'Could not reach Google Sheet', !ok);
+  render();
 }
 
 /* ============ GOOGLE SHEET TAB ============ */
@@ -819,12 +882,9 @@ document.addEventListener('click', e => {
   if (t.dataset.tab){ S.tab = t.dataset.tab; loadAndRender(); return; }
   if (t.dataset.part){ S.part = +t.dataset.part; loadAndRender(); return; }
   if (t.dataset.sign){ signOff(+t.dataset.sign); return; }
-  if (t.dataset.unsign){
-    const up = +t.dataset.unsign, r = rec(up, S.rMonth);
-    if (!confirm('Clear all inspector signatures for this month?')) return;
-    Object.keys(dmOf(r)).filter(d => dmOf(r)[d].ins).forEach(d => setDM(up, S.rMonth, +d, 'ins', ''));
-    persist(); save(); return;
-  }
+  if (t.dataset.unsign){ unsignPicked(+t.dataset.unsign); return; }
+  if (t.dataset.selall){ tickBoxes(+t.dataset.selall, 'unsigned'); return; }
+  if (t.dataset.selnone){ tickBoxes(+t.dataset.selnone, 'none'); return; }
   const m = S.date.slice(0,7), day = +S.date.slice(8,10);
   if (t.dataset.tg){
     const cur = (rec(S.part,m).days[day]||{})[t.dataset.tg]||0;
@@ -844,7 +904,7 @@ document.addEventListener('click', e => {
   if (t.id==='printBtn') window.print();
   if (t.id==='connectBtn') connect();
   if (t.id==='disconnectBtn') disconnect();
-  if (t.id==='refreshBtn') loadAndRender();
+  if (t.id==='refreshBtn') refreshNow();
 });
 document.addEventListener('input', e => {
   if (e.target.dataset && e.target.dataset.cfg && e.target.type === 'text'){ cfgField(e); return; }
