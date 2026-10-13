@@ -182,7 +182,7 @@ main.wide{max-width:1500px}
 /* ============ SETTINGS ============
    The Google Apps Script Web App URL is set from the "Google Sheet" tab
    (or put it in DEFAULT_URL to pre-fill for everyone). */
-const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbw62uKfNdMlkhg9kowRfm30Oxdu7mmV9myK5zV7U6xEqHYU4b6bbL-wZKeUVmMU2hYi/exec';
+const DEFAULT_URL = '';
 const URL_KEY = 'hx3f32.url';
 const CONFIG = { SCRIPT_URL: (function(){ try{ return localStorage.getItem(URL_KEY) || DEFAULT_URL; }catch(e){ return DEFAULT_URL; } })() };
 
@@ -240,6 +240,15 @@ let saved = {};
 try { saved = JSON.parse(localStorage.getItem(LS) || '{}'); } catch(e){}
 let db = saved.db || {};            // db["1_2026-10"] = {part, month, location, ..., days:{5:{a0s:3}}}
 let pending = saved.pending || {};  // pending["1_2026-10"] = {changes:{day:{id:{pre,post}}}, meta:bool}
+// Heal records saved by older versions whose month got corrupted (key is the source of truth)
+['db','pending'].forEach(name => {
+  const o = name === 'db' ? db : pending;
+  Object.keys(o).forEach(k => {
+    const m = k.match(/^(\d+)_(\d{4}-\d{2})$/);
+    if (!m){ delete o[k]; return; }
+    if (name === 'db'){ o[k].part = +m[1]; o[k].month = m[2]; }
+  });
+});
 const pad = n => String(n).padStart(2,'0');
 const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
 const S = { tab:'fill', part:1, date:todayStr(), rMonth:todayStr().slice(0,7), rPart:'both', sync: CONFIG.SCRIPT_URL ? 'connecting' : 'local', admin:{ pw:'', draft:null } };
@@ -383,7 +392,7 @@ async function save(opts){
       if (v.meta) body.meta = { location:r.location };
       const res = await netPost(body);
       if (!res.ok) throw new Error(res.error || 'Save failed');
-      db[k] = Object.assign({ part:r.part, month:r.month }, res.record); // server copy includes other operators' ticks
+      db[k] = Object.assign({}, res.record, { part:r.part, month:r.month }); // server copy includes other operators' ticks; part/month always come from our own key
       const np = pending[k];
       if (np){ reapplyPending(db[k], np); if (np.meta) db[k].location = r.location; }
       delete taken[k];
