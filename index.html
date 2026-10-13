@@ -188,7 +188,7 @@ main.wide{max-width:1500px}
 /* ============ SETTINGS ============
    The Google Apps Script Web App URL is set from the "Google Sheet" tab
    (or put it in DEFAULT_URL to pre-fill for everyone). */
-const DEFAULT_URL = '';
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbw62uKfNdMlkhg9kowRfm30Oxdu7mmV9myK5zV7U6xEqHYU4b6bbL-wZKeUVmMU2hYi/exec';
 const URL_KEY = 'hx3f32.url';
 const CONFIG = { SCRIPT_URL: (function(){ try{ return localStorage.getItem(URL_KEY) || DEFAULT_URL; }catch(e){ return DEFAULT_URL; } })() };
 
